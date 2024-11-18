@@ -2,6 +2,9 @@ import pandas as pd
 #pd.set_option("display.max_columns", None)
 #pd.set_option("display.max_rows", None)
 import numpy as np
+from sktime.transformations.series.vmd import VmdTransformer
+from sktime.datasets import load_solar
+
 
 class DataPreprocessor():
     def __init__ (self, dataFrame):
@@ -51,18 +54,28 @@ class DataPreprocessor():
 
         self.dataFrame['Upper_Band'] = self.dataFrame['SMA_20'] + (2 * self.dataFrame['STD'])
         self.dataFrame['Lower_Band'] = self.dataFrame['SMA_20'] - (2 * self.dataFrame['STD'])
+def testingVMD():
+    y = load_solar()
+    print(y)
+    transformer = VmdTransformer()
+    modes = transformer.fit_transform(y)
+    print (modes)
+
 def main():
+    testingVMD()
+    """
     file_location = r"./Data/A.csv"
     df = pd.read_csv(file_location)
     preprocessor = DataPreprocessor(df)
     preprocessor.removeEmptyValues()
-    print(preprocessor.getDataFrame().head())
+    print(preprocessor.getDataFrame().info())
     preprocessor.SimpleMovingAverage()
     newDF = preprocessor.getDataFrame()
     print(newDF['SMA_20'])
     preprocessor.ExponentialMovingAverage()
     newDF2 = preprocessor.getDataFrame()
     print(newDF2['EMA_20'])
-
+    print(newDF2.info())
+    """
 if __name__ == "__main__":
     main()
