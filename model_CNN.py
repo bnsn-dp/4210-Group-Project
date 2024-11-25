@@ -76,13 +76,13 @@ def main():
     # TensorFlow CNN Model Building
     model = tf.keras.Sequential([
         tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu', input_shape=(look_back, 1)),
-        # tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.BatchNormalization(),
         tf.keras.layers.MaxPool1D(pool_size=2),
-        # tf.keras.layers.LSTM(64, return_sequences=False),
-        # tf.keras.layers.Dropout(0.3),
-        # tf.keras.layers.Flatten(),
+        tf.keras.layers.LSTM(64, return_sequences=False),
+        tf.keras.layers.Dropout(0.3),
+        tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(50, activation='relu'),
-        # tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1)
 
     ])
