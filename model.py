@@ -2,7 +2,6 @@ import tensorflow as tf
 import pandas as pd
 import numpy as np
 from sktime.transformations.series.vmd import VmdTransformer
-from sklearn.model_selection import train_test_split
 import matplotlib
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
@@ -32,12 +31,42 @@ def preprocess_and_decompose(df_training, df_testing, target_column, look_back, 
 
     return X_train, y_train, X_test, y_test
 
+def preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back, forecast_horizon=30):
+    
+    print("dataFrame Shape:", dataFrame.shape)
+    
+    X_train, y_train, X_test = [], [], []
+    values = dataFrame[target_column].values
+
+    for i in range(len(dataFrame[target_column].values) - look_back):
+        X_train.append(values[i:i + look_back])
+        y_train.append(values[i + look_back])
+    
+    X_train = np.array(X_train)
+    y_train = np.array(y_train)
+
+    # converting the data into a 3D shape of samples, timesteps(window), and features(1)
+    X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
+
+    test_values = dataFrame[target_column].values
+    for i in range(len(test_values) - forecast_horizon - look_back, len(test_values) - forecast_horizon):
+        X_test.append(test_values[i:i + look_back])
+    
+    X_test = np.array(X_test).reshape((-1, look_back, 1))
+    print("X_train shape:", X_train.shape)
+    print("y_train shape:", y_train.shape)
+    print("X_test shape:", X_test.shape)
+    
+    return X_train, y_train, X_test
+
 def root_mean_squared_error(y_true, y_pred):
     return tf.sqrt(tf.reduce_mean(tf.square(y_true - y_pred)))
 
 def main():
     # Driver function of this model. Calls main functions and sets all the values for the 
     # VMD - BPNN model.
+
+    flag_VMD = False
     print('Model testing and Data Preprocessing starting...')
 
     start_date_training  = '2016-08-22 00:00:00-04:00'
@@ -52,7 +81,8 @@ def main():
     file = r'./Data/AAPL.csv'
     columns_to_drop = ['Open','High','Low','Volume','Dividends','Stock Splits'] 
     dataFrame = pd.read_csv(file)
-    dataFrame.drop(columns_to_drop, axis=1)
+    dataFrame = dataFrame.drop(columns_to_drop, axis=1)
+
 
     dataFrame_training = dataFrame[(dataFrame['Date'] >= start_date_training) & (dataFrame['Date'] <= end_date_training)].copy()
     dataFrame_testing = dataFrame[(dataFrame['Date']>= start_date_testing)&(dataFrame['Date'] <= end_date_testing)].copy()
@@ -61,38 +91,49 @@ def main():
     dataFrame_training[target_column] = scaler.fit_transform(dataFrame_training[[target_column]])
     dataFrame_testing[target_column] = scaler.transform(dataFrame_testing[[target_column]])
     
-    X_train, y_train, X_test, y_test = preprocess_and_decompose(dataFrame_training, dataFrame_testing, target_column, look_back, K)
-    print("Training data shapes:", X_train.shape, y_train.shape)
-    print("Testing data shapes:", X_test.shape, y_test.shape)
-    print("NaN in X_test:", np.isnan(X_test).any())
-    print("Infinity in X_test:", np.isinf(X_test).any())
-    print("NaN in y_test:", np.isnan(y_test).any())
-    print("Infinity in y_test:", np.isinf(y_test).any())
-    print("Min y_test:", np.min(y_test), "Max y_test:", np.max(y_test))
+    print(dataFrame_training.info(),dataFrame_testing.info())
 
-    # TensorFlow BackPropagation Model Building
+    if flag_VMD == True: 
+
+        X_train, y_train, X_test, y_test = preprocess_and_decompose(dataFrame_training, dataFrame_testing, target_column, look_back, K)
+
+        print("Training data shapes:", X_train.shape, y_train.shape)
+        print("Testing data shapes:", X_test.shape, y_test.shape)
+        print("NaN in X_test:", np.isnan(X_test).any())
+        print("Infinity in X_test:", np.isinf(X_test).any())
+        print("NaN in y_test:", np.isnan(y_test).any())
+        print("Infinity in y_test:", np.isinf(y_test).any())
+        print("Min y_test:", np.min(y_test), "Max y_test:", np.max(y_test))
+
+    if flag_VMD == False: 
+        X_train, y_train, X_test = preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back)
+
+
+    # TensorFlow CNN Model Building
     model = tf.keras.Sequential([
         tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu', input_shape=(look_back, K)),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.MaxPool1D(pool_size=2),
-        # tf.keras.layers.LSTM(64, return_sequences=False),
+        tf.keras.layers.LSTM(64, return_sequences=False),
         tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(50, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
+        #tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1)
 
     ])
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), loss='mse', metrics=['mae', root_mean_squared_error])
     model.summary()
 
-    history = model.fit(X_train,y_train, validation_split = 0.2, epochs= 10, batch_size=10)
+    history = model.fit(X_train,y_train, validation_split = 0.2, epochs= 10, batch_size=20)
 
     print(history.history['loss'])
     print(history.history['val_loss'])
 
     plt.plot(history.history['loss'], label= 'Training Loss')
     plt.plot(history.history['val_loss'], label = 'Validation Loss')
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss(%)")
     plt.legend()
     plt.title("Training and Validation Loss")
     plt.show()
@@ -103,9 +144,12 @@ def main():
     print('Test RMSE: ', rmse)
 
     y_pred = model.predict(X_test)
-    plt.figure(figsize=(6, 3))
+    plt.figure(figsize=(12, 6))
     plt.plot(y_test, label="Actual")
     plt.plot(y_pred, label="Predicted")
+    plt.xlabel('Day in time')
+    plt.ylabel('Closing Price')
+
     plt.legend()
     plt.title("Actual vs Predicted Closing Prices using IMFs")
     plt.show()
