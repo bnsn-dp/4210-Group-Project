@@ -31,34 +31,6 @@ def preprocess_and_decompose(df_training, df_testing, target_column, look_back, 
 
     return X_train, y_train, X_test, y_test
 
-def preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back, forecast_horizon=30):
-    
-    print("dataFrame Shape:", dataFrame.shape)
-    
-    X_train, y_train, X_test = [], [], []
-    values = dataFrame[target_column].values
-
-    for i in range(len(dataFrame[target_column].values) - look_back):
-        X_train.append(values[i:i + look_back])
-        y_train.append(values[i + look_back])
-    
-    X_train = np.array(X_train)
-    y_train = np.array(y_train)
-
-    # converting the data into a 3D shape of samples, timesteps(window), and features(1)
-    X_train = X_train.reshape((X_train.shape[0], X_train.shape[1], 1))
-
-    test_values = dataFrame[target_column].values
-    for i in range(len(test_values) - forecast_horizon - look_back, len(test_values) - forecast_horizon):
-        X_test.append(test_values[i:i + look_back])
-    
-    X_test = np.array(X_test).reshape((-1, look_back, 1))
-    print("X_train shape:", X_train.shape)
-    print("y_train shape:", y_train.shape)
-    print("X_test shape:", X_test.shape)
-    
-    return X_train, y_train, X_test
-
 def root_mean_squared_error(y_true, y_pred):
     return tf.sqrt(tf.reduce_mean(tf.square(y_true - y_pred)))
 
@@ -68,7 +40,6 @@ def main():
 
     flag_VMD = False
     print('Model testing and Data Preprocessing starting...')
-
     start_date_training  = '2016-08-22 00:00:00-04:00'
     end_date_training = '2023-06-16 00:00:00-04:00'
     start_date_testing = '2023-06-20 00:00:00-04:00'
@@ -83,7 +54,6 @@ def main():
     dataFrame = pd.read_csv(file)
     dataFrame = dataFrame.drop(columns_to_drop, axis=1)
 
-
     dataFrame_training = dataFrame[(dataFrame['Date'] >= start_date_training) & (dataFrame['Date'] <= end_date_training)].copy()
     dataFrame_testing = dataFrame[(dataFrame['Date']>= start_date_testing)&(dataFrame['Date'] <= end_date_testing)].copy()
     
@@ -93,20 +63,15 @@ def main():
     
     print(dataFrame_training.info(),dataFrame_testing.info())
 
-    if flag_VMD == True: 
+    X_train, y_train, X_test, y_test = preprocess_and_decompose(dataFrame_training, dataFrame_testing, target_column, look_back, K)
 
-        X_train, y_train, X_test, y_test = preprocess_and_decompose(dataFrame_training, dataFrame_testing, target_column, look_back, K)
-
-        print("Training data shapes:", X_train.shape, y_train.shape)
-        print("Testing data shapes:", X_test.shape, y_test.shape)
-        print("NaN in X_test:", np.isnan(X_test).any())
-        print("Infinity in X_test:", np.isinf(X_test).any())
-        print("NaN in y_test:", np.isnan(y_test).any())
-        print("Infinity in y_test:", np.isinf(y_test).any())
-        print("Min y_test:", np.min(y_test), "Max y_test:", np.max(y_test))
-
-    if flag_VMD == False: 
-        X_train, y_train, X_test = preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back)
+    print("Training data shapes:", X_train.shape, y_train.shape)
+    print("Testing data shapes:", X_test.shape, y_test.shape)
+    print("NaN in X_test:", np.isnan(X_test).any())
+    print("Infinity in X_test:", np.isinf(X_test).any())
+    print("NaN in y_test:", np.isnan(y_test).any())
+    print("Infinity in y_test:", np.isinf(y_test).any())
+    print("Min y_test:", np.min(y_test), "Max y_test:", np.max(y_test))
 
 
     # TensorFlow CNN Model Building
@@ -118,7 +83,7 @@ def main():
         tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(50, activation='relu'),
-        #tf.keras.layers.Dropout(0.2),
+        tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1)
 
     ])
