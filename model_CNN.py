@@ -42,16 +42,12 @@ def main():
     # Driver function of this model. Calls main functions and sets all the values for the 
     # VMD - BPNN model.
     print('Model testing and Data Preprocessing starting...')
-    '''
     
-    start_date_training  = '2016-08-22 00:00:00-04:00'
-    end_date_training = '2023-06-16 00:00:00-04:00'
-    start_date_testing = '2023-06-20 00:00:00-04:00'
-    end_date_testing = '2023-09-21 00:00:00-04:00'
+    start_date  = '2020-08-03 00:00:00-04:00'
+    end_date = '2023-09-21 00:00:00-04:00'
 
-    '''
     
-    look_back = 5
+    look_back = 15
     K = 5
     target_column = 'Close'
 
@@ -61,35 +57,40 @@ def main():
     dataFrame = dataFrame.drop(columns_to_drop, axis=1)
 
 
-    #dataFrame_training = dataFrame[(dataFrame['Date'] >= start_date_training) & (dataFrame['Date'] <= end_date_training)].copy()
+    dataFrame = dataFrame[(dataFrame['Date'] >= start_date) & (dataFrame['Date'] <= end_date)]
     #dataFrame_testing = dataFrame[(dataFrame['Date']>= start_date_testing)&(dataFrame['Date'] <= end_date_testing)].copy()
     
-    # scaler = MinMaxScaler()
-    # dataFrame[target_column] = scaler.fit_transform(dataFrame[[target_column]])
+    scaler = MinMaxScaler()
+    dataFrame[target_column] = scaler.fit_transform(dataFrame[[target_column]])
     #dataFrame_testing[target_column] = scaler.transform(dataFrame_testing[[target_column]])
     
     print(dataFrame.info(),dataFrame.head())
           #,dataFrame_testing.info())
 
-    X_train, y_train, X_test, y_test = preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back, 30)
+
+
+    X_train, y_train, X_test, y_test = preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back, 37)
+
+    plt.plot(dataFrame[target_column].values)
+    plt.title('Target Column Values')
+    plt.show()
 
     # TensorFlow CNN Model Building
     model = tf.keras.Sequential([
-        tf.keras.layers.Conv1D(filters=32, kernel_size=3, activation='relu', input_shape=(look_back, 1)),
+        tf.keras.layers.Conv1D(filters=64, kernel_size=3, activation='relu', input_shape=(look_back, 1)),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.MaxPool1D(pool_size=2),
         tf.keras.layers.LSTM(64, return_sequences=False),
         tf.keras.layers.Dropout(0.3),
-        tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(50, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
+        #tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1)
 
     ])
-    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.00001), loss='mse', metrics=['mae', root_mean_squared_error])
+    model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.001), loss='mse', metrics=['mae', root_mean_squared_error])
     model.summary()
 
-    history = model.fit(X_train, y_train, validation_split = 0.2, epochs= 20, batch_size=50)
+    history = model.fit(X_train, y_train, validation_split = 0.2, epochs= 10, batch_size=5)
 
     print(history.history['loss'])
     print(history.history['val_loss'])
