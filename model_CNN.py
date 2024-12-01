@@ -8,7 +8,7 @@ from sklearn.preprocessing import MinMaxScaler
 
 def preprocess_and_decompose_NOVMD(dataFrame, target_column, look_back, forecast_horizon=30):
     
-    print("dataFrame Shape:", dataFrame.shape)
+    #print("dataFrame Shape:", dataFrame.shape)
     
     X_train, y_train, X_test, y_test = [], [], [], []
     values = dataFrame[target_column].values
@@ -47,7 +47,7 @@ def main():
     end_date = '2023-09-21 00:00:00-04:00'
 
     
-    look_back = 15
+    look_back = 25
     K = 5
     target_column = 'Close'
 
@@ -103,6 +103,37 @@ def main():
     plt.title("Training and Validation Loss")
     plt.show()
 
+    epochs = range(1,len(history.history['loss']) + 1)
+    loss = history.history['loss']
+    mae = history.history['mae']
+    rmse = history.history['root_mean_squared_error']
+
+    plt.figure(figsize=(12,5))
+
+    plt.subplot(1, 3, 1)
+    plt.plot(epochs, loss, label='Loss')
+    plt.title('Loss over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    plt.subplot(1, 3, 2)
+    plt.plot(epochs, mae, label='MAE', color='orange')
+    plt.title('MAE over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Mean Absolute Error')
+    plt.legend()
+    
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs, rmse, label='RMSE', color='green')
+    plt.title('RMSE over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Root Mean Squared Error')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
     '''
     loss, mae, rmse = model.evaluate(X_test)
     print('Test loss: ', loss)
@@ -111,6 +142,9 @@ def main():
     '''
 
     y_pred = model.predict(X_test)
+    y_pred = scaler.inverse_transform(y_pred)
+    y_test = y_test.reshape(-1,1)
+    y_test = scaler.inverse_transform(y_test)
     plt.figure(figsize=(12, 6))
     plt.plot(range(len(y_pred)), y_test[:len(y_pred)], label="Actual")  # True test values
     plt.plot(range(len(y_pred)), y_pred, label="Predicted")

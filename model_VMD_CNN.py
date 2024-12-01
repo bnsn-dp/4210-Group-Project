@@ -40,11 +40,11 @@ def main():
 
     flag_VMD = False
     print('Model testing and Data Preprocessing starting...')
-    start_date_training  = '2016-08-22 00:00:00-04:00'
+    start_date_training  = '2020-08-03 00:00:00-04:00'
     end_date_training = '2023-06-16 00:00:00-04:00'
-    start_date_testing = '2023-06-20 00:00:00-04:00'
+    start_date_testing = '2023-08-10 00:00:00-04:00'
     end_date_testing = '2023-09-21 00:00:00-04:00'
-    look_back = 5
+    look_back = 25
     K = 5
     target_column = 'Close'
 
@@ -102,6 +102,39 @@ def main():
     plt.legend()
     plt.title("Training and Validation Loss")
     plt.show()
+
+
+    epochs = range(1,len(history.history['loss']) + 1)
+    loss = history.history['loss']
+    mae = history.history['mae']
+    rmse = history.history['root_mean_squared_error']
+
+    plt.figure(figsize=(12,5))
+    
+    plt.subplot(1, 3, 1)
+    plt.plot(epochs, loss, label='Loss')
+    plt.title('Loss over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+
+    plt.subplot(1, 3, 2)
+    plt.plot(epochs, mae, label='MAE', color='orange')
+    plt.title('MAE over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Mean Absolute Error')
+    plt.legend()
+    
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs, rmse, label='RMSE', color='green')
+    plt.title('RMSE over Epochs')
+    plt.xlabel('Epochs')
+    plt.ylabel('Root Mean Squared Error')
+    plt.legend()
+
+    plt.tight_layout()
+    plt.show()
+
 
     loss, mae, rmse = model.evaluate(X_test, y_test)
     print('Test loss: ', loss)
