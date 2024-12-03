@@ -17,12 +17,18 @@ def preprocess_and_decompose(df_training, df_testing, target_column, look_back, 
     transformer = VmdTransformer(K=K)
     imfs_training = transformer.fit_transform(df_training[target_column].values)
     imfs_testing = transformer.transform(df_testing[target_column].values)
+    for i in range(K):
+        plt.plot(imfs_training[:, i], label=f'IMF {i + 1}')
+    plt.legend()
+    plt.title("Training IMFs")
+    plt.show()
+
     
     print("IMFs Training Shape:", imfs_training.shape)
     print("IMFs Testing Shape:", imfs_testing.shape)
     print("NaN in IMFs Training:", np.isnan(imfs_training).any())
     print("Infinity in IMFs Training:", np.isinf(imfs_training).any())
-
+    
     X_train, y_train = create_imf_sequences(imfs_training, look_back)
     X_test, y_test = create_imf_sequences(imfs_testing, look_back)
     
@@ -83,7 +89,7 @@ def main():
         tf.keras.layers.Dropout(0.3),
         tf.keras.layers.Flatten(),
         tf.keras.layers.Dense(50, activation='relu'),
-        tf.keras.layers.Dropout(0.2),
+        #tf.keras.layers.Dropout(0.2),
         tf.keras.layers.Dense(1)
 
     ])
@@ -142,6 +148,9 @@ def main():
     print('Test RMSE: ', rmse)
 
     y_pred = model.predict(X_test)
+    y_pred = scaler.inverse_transform(y_pred)
+    y_test = y_test.reshape(-1,1)
+    y_test = scaler.inverse_transform(y_test)
     plt.figure(figsize=(12, 6))
     plt.plot(y_test, label="Actual")
     plt.plot(y_pred, label="Predicted")
